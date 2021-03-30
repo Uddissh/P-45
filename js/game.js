@@ -4,8 +4,8 @@ class Game {
     }
   
     getState(){
-      var gameStateRef  = database.ref('gameState');
-      gameStateRef.on("value",function(data){
+      gameState  = database.ref('gameState');
+      gameState.on("value",function(data){
          gameState = data.val();
       })
   
@@ -18,8 +18,9 @@ class Game {
     }
   
     async start(){
-      if(gameState === 2){
+      if(gameState === 3){
         player = new Player();
+
         var playerCountRef = await database.ref('playerCount').once("value");
         if(playerCountRef.exists()){
           playerCount = playerCountRef.val();
@@ -77,11 +78,7 @@ class Game {
         player.update();
       }
   
-      if(player.distance > 3860){
-        //gameState = 2;
-        player.rank += 1;
-        console.log(player.distance);
-      }
+      
     }
   
     end(){
