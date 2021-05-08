@@ -90,7 +90,7 @@ function draw() {
 }
 
 function keyPressed() {
-  if (keyCode === 32 && gameState === 1) {
+  if (keyCode === 32) {
     game.update(2)
   }
 }
