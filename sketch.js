@@ -1,96 +1,180 @@
-var game, form;
+var PLAY = 1;
+var END = 0;
+var gameState = PLAY;
+var trex;
+var ground, invisibleGround, groundImage;
 
-var database, gameState=1;
+var cloudsGroup, cloudImage;
+var obstaclesGroup, obstacle1, obstacle2, obstacle3, obstacle4, obstacle5, obstacle6;
 
-var room1, room2, room3, room4;
+var score;
 
-var player, player1, player2, player3, player4, player5, player6;
-
-var team1 = [], team2 = [];
-
-var score1 = 200;
-
-var score2 = 200;
-
-var playerCount = 0;
-
-var machine,artillery,heavyPower, medic, rocket, force;
-var armed1, armed2, armedSong;
-var room1Img, room2Img, room3Img;
-var shoot, machineGun,gun,akfiring;
-
-var next, Name;
-
-function preload() { 
-  machine = loadImage("images/blah.jpg");
-  artillery = loadImage("images/artillery.jpg");
-  heavyPower = loadImage("images/demolisher.jpg");
-  medic = loadImage("images/medic.jpg");
-  rocket = loadImage("images/rocketLauncher.jpg");
-  force = loadImage("images/specialforces.jpg");
-
-  room1Img = loadImage("images/germanguns.jpg");
-  room2Img = loadImage("images/akGuns.jpg");
-  room3Img = loadImage("images/onlyguns.jpg");
-
-  armed1 = loadImage("images/ArmedSeiges.png");
-  armed2 = loadImage("images/HalfReady.png");
-  armedSong = loadSound("sounds/warZone.mp3");
-
-  shoot = loadSound("sounds/shooting.mp3");
-  machineGun = loadSound("sounds/machine-gun.mp3");
-  //gun = loadSound("sounds/gunShot.mp3");
-  akfiring = loadSound("sounds/Ak-47.mp3");
-
+var gameOver
+var reStart
+function preload(){
+  
+  trex = loadImage("bike.gif");
+  
+  groundImage = loadImage("ground2.png");
+  
+  cloudImage = loadImage("cloud.png");
+  
+  obstacle1 = loadImage("obs1.jpeg");
+  obstacle2 = loadImage("obs1.jpeg");
+  obstacle3 = loadImage("obs1.jpeg");
+  obstacle4 = loadImage("obs1.jpeg");
+  obstacle5 = loadImage("obs1.jpeg");
+  obstacle6 = loadImage("obs1.jpeg");
+  
+  gameOverImg = loadImage("gameOver.png");
+  reStartImg = loadImage("restart.png");
 }
 
-// game state 1 means first stage
-// game state 2 means second stage
-// game state 3 means match started 
-// game state 0 means match over
-
 function setup() {
-  createCanvas(1600,750);
-
-    database = firebase.database();
-    console.log("game started");
-
-  //room1 = createSprite(500,500,50,50);
+  createCanvas(600, 200);
   
-  next = createButton("Start [PRESS space]")
-  next.position(700, 700);
-  console.log("next button")
-  Name = createInput("Enter your Name")
-  Name.position(500,500)
-  console.log("input name")
-
+  trex = createSprite(50,180,20,50);
+  trex.scale = 0.5;
+  
+  ground = createSprite(200,180,400,20);
+  ground.addImage("ground",groundImage);
+  ground.x = ground.width /2;
+  
+  gameOver = createSprite(0, 100);
+  gameOver.addImage(gameOverImg);
+  gameOver.visible = false;
+  gameOver.scale = 0.5;
+  
+  reStart = createSprite(300, 150);
+  reStart.addImage(reStartImg);
+  reStart.scale = 0;
+  reStart.visible = false;
+  invisibleGround = createSprite(200,190,400,10);
+  invisibleGround.visible = false;
+  
+  cloudsGroup = new Group();
+  obstaclesGroup = new Group();
+  
+  score = 0;
+  
+  camera.x = trex.x - 20;
+  camera.y = trex.y - 20;
 }
 
 function draw() {
-
-    if (gameState === 1) {
-      background(armed1);
-      Name.hide();
-      console.log("game state 1")
-    }else if (gameState === 2) {
-      background(armed2);
-      console.log("game state 2/1")
-      next.hide();
-      game = new Game()
-      game.getState();
-      game.start();
-      console.log("game state 2/2")
+  background(180);
+  text("Score: "+ score, 0,70);
+  if (gameState === PLAY) {
+   ground.velocityX = -(6+3*score/100);
+      
+  
+  score = score + Math.round(getFrameRate()/60);
+  
+  
+  if(keyDown("space")) {
+    trex.velocityY = -10;
+  }
+  
+  trex.velocityY = trex.velocityY + 0.8
+  
+  if (ground.x < 0){
+    ground.x = ground.width/2;
+  }
+  
+  trex.collide(invisibleGround);
+  spawnClouds();
+  spawnObstacles();
+    if (obstaclesGroup.isTouching(trex)) {
+     gameState = END;   
     }
-    console.log(gameState)
-
+  }
+  else if(gameState === END) {
+    gameOver.visible = true;
+    reStart.visible = true;
     
-
-    drawSprites();
-
+    //set velcity of each game object to 0
+    ground.velocityX = 0;
+    trex.velocityY = 0;
+    obstaclesGroup.setVelocityXEach(0);
+    cloudsGroup.setVelocityXEach(0);
+    
+    //set lifetime of the game objects so that they are never destroyed
+    obstaclesGroup.setLifetimeEach(-1);
+    cloudsGroup.setLifetimeEach(-1);
+    
+    
+  }
+  
+  if(mousePressedOver(reStart)) {
+    reset();
+  }
+  
+  drawSprites();
+}
+function reset(){
+  gameState = PLAY;
+  
+  gameOver.visible = false;
+  restart.visible = false;
+  
+  obstaclesGroup.destroyEach();
+  cloudsGroup.destroyEach();
+  
+  trex.changeAnimation("running", trex_running);
+  
+  score = 0;
+  
 }
 
-function keyPressed() {
-  if (keyCode === 32) {
-    game.update(2)
+function spawnClouds() {
+  //write code here to spawn the clouds
+  if (frameCount % 60 === 0) {
+    var cloud = createSprite(600,120,40,10);
+    cloud.y = Math.round(random(80,120));
+    cloud.addImage(cloudImage);
+    cloud.scale = 0.5;
+    cloud.velocityX = -3;
+    
+     //assign lifetime to the variable
+    cloud.lifetime = 200;
+    
+    //adjust the depth
+    cloud.depth = trex.depth;
+    trex.depth = trex.depth + 1;
+    
+    //add each cloud to the group
+    cloudsGroup.add(cloud);
+  }
+  
+}
+
+function spawnObstacles() {
+  if(frameCount % 60 === 0) {
+    var obstacle = createSprite(600,165,10,40);
+    obstacle.velocityX = -(6+3*score/100);
+    
+    //generate random obstacles
+    var rand = Math.round(random(1,6));
+    switch(rand) {
+      case 1: obstacle.addImage(obstacle1);
+              break;
+      case 2: obstacle.addImage(obstacle2);
+              break;
+      case 3: obstacle.addImage(obstacle3);
+              break;
+      case 4: obstacle.addImage(obstacle4);
+              break;
+      case 5: obstacle.addImage(obstacle5);
+              break;
+      case 6: obstacle.addImage(obstacle6);
+              break;
+      default: break;
+    }
+    
+    //assign scale and lifetime to the obstacle           
+    obstacle.scale = 0.2;
+    obstacle.lifetime = 300;
+    //add each obstacle to the group
+    obstaclesGroup.add(obstacle);
   }
 }
